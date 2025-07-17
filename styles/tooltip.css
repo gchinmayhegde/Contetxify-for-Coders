@@ -1,0 +1,79 @@
+#contextify-tooltip {
+  position: absolute;
+  background: #1e1e1e;
+  color: #fff;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  max-width: 320px;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  animation: fadeIn 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: Arial, sans-serif;
+}
+
+.tooltip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tooltip-header strong {
+  font-size: 15px;
+}
+
+#contextify-close-btn {
+  background: none;
+  color: #fff;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.tooltip-content {
+  max-height: 200px;
+  overflow-y: auto;
+  background: #2d2d2d;
+  padding: 8px;
+  border-radius: 6px;
+  font-family: monospace;
+  line-height: 1.4;
+}
+
+.tooltip-content pre {
+  background: #333;
+  padding: 6px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin-top: 5px;
+}
+
+.tooltip-content code {
+  background: #444;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: monospace;
+  color: #00ffae;
+}
+
+#contextify-copy-btn {
+  align-self: flex-end;
+  padding: 6px 12px;
+  background: #4caf50;
+  border: none;
+  color: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#contextify-copy-btn:hover {
+  background: #45a049;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
