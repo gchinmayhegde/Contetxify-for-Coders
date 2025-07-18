@@ -1,10 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Contextify for Coders",
-  "version": "2.0",
-  "description": "Double-click code keywords for instant AI explanations using Gemini.",
+  "version": "2.1",
+  "description": "Select code snippets for instant AI explanations using Gemini. Perfect for coding beginners!",
   "permissions": ["storage", "activeTab", "scripting"],
-  "host_permissions": ["https://generativelanguage.googleapis.com/*"],
+  "host_permissions": [
+    "https://generativelanguage.googleapis.com/*",
+    "https://cdnjs.cloudflare.com/*"
+  ],
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
@@ -19,7 +22,17 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content/contentScript.js"],
-      "css": ["styles/tooltip.css"]
+      "css": ["styles/tooltip.css"],
+      "run_at": "document_end"
     }
-  ]
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["styles/tooltip.css"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
 }
