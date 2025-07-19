@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Check API key status
   chrome.storage.sync.get('apiKey', function(data) {
     if (!data.apiKey) {
-      showMessage('⚠️ Please set your Gemini API key in settings first!', 'warning');
+      showMessage('⚠️ Please set your Gemini API key in settings first!!', 'warning');
       settingsBtn.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%)';
       settingsBtn.style.color = '#fff';
     }

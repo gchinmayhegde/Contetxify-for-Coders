@@ -22,7 +22,7 @@ export async function getAIExplanation(keyword, language) {
     });
 
     const data = await response.json();
-    return data?.candidates?.[0]?.content?.parts?.[0]?.text || "No explanation found.";
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text || "No explanation found";
   } catch (err) {
     console.error("Gemini API Error:", err);
     return "Error fetching explanation.";

@@ -48,9 +48,28 @@ async function getAIExplanation(keyword, language) {
 // Track selection state
 let selectionTimeout;
 let currentTooltip = null;
+let currentExplanation = ""; // Store the current AI response
+let lastProcessedSelection = ""; // Track the last processed selection
+let tooltipCloseTime = 0; // Track when tooltip was closed
+let isProcessingSelection = false; // Flag to prevent multiple simultaneous processing
 
 // Listen for text selection
 document.addEventListener("mouseup", async (e) => {
+  // Skip if clicking on tooltip elements
+  if (e.target.closest("#contextify-tooltip")) {
+    return;
+  }
+
+  // Skip if tooltip was just closed (within 1 second)
+  if (Date.now() - tooltipCloseTime < 1000) {
+    return;
+  }
+
+  // Skip if we're already processing a selection
+  if (isProcessingSelection) {
+    return;
+  }
+
   // Clear any existing timeout
   if (selectionTimeout) {
     clearTimeout(selectionTimeout);
@@ -63,6 +82,11 @@ document.addEventListener("mouseup", async (e) => {
     // Only proceed if we have selected text and it looks like code
     if (!selectedText || selectedText.length < 2) {
       removeTooltip();
+      return;
+    }
+
+    // Skip if this is the same selection we just processed
+    if (selectedText === lastProcessedSelection) {
       return;
     }
 
@@ -87,10 +111,19 @@ document.addEventListener("mouseup", async (e) => {
       return;
     }
 
+    // Set processing flag and store current selection
+    isProcessingSelection = true;
+    lastProcessedSelection = selectedText;
+
     removeTooltip();
 
     // Get selection position
     const selection = window.getSelection();
+    if (selection.rangeCount === 0) {
+      isProcessingSelection = false;
+      return;
+    }
+
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
 
@@ -116,12 +149,12 @@ document.addEventListener("mouseup", async (e) => {
         </div>
       </div>
       <div class="tooltip-actions">
-        <button id="contextify-copy-btn" title="Copy selected code">
+        <button id="contextify-copy-btn" title="Copy AI explanation">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
           </svg>
-          Copy
+          Copy Response
         </button>
       </div>
     `;
@@ -137,48 +170,109 @@ document.addEventListener("mouseup", async (e) => {
     currentTooltip = tooltip;
 
     // Add event listeners
-    document.querySelector("#contextify-close-btn").onclick = removeTooltip;
-    document.querySelector("#contextify-copy-btn").onclick = () => {
-      navigator.clipboard.writeText(selectedText);
-      const btn = document.querySelector("#contextify-copy-btn");
-      const originalHTML = btn.innerHTML;
-      btn.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="20,6 9,17 4,12"></polyline>
-        </svg>
-        Copied!
-      `;
-      setTimeout(() => {
-        if (btn) btn.innerHTML = originalHTML;
-      }, 2000);
+    document.querySelector("#contextify-close-btn").onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeTooltipProperly();
+    };
+    
+    document.querySelector("#contextify-copy-btn").onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Copy the AI explanation instead of selected text
+      if (currentExplanation && currentExplanation.trim()) {
+        navigator.clipboard.writeText(currentExplanation);
+        const btn = document.querySelector("#contextify-copy-btn");
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20,6 9,17 4,12"></polyline>
+          </svg>
+          Copied!
+        `;
+        setTimeout(() => {
+          if (btn) btn.innerHTML = originalHTML;
+        }, 2000);
+      } else {
+        // Fallback if no explanation is available yet
+        const btn = document.querySelector("#contextify-copy-btn");
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          No Response Yet
+        `;
+        setTimeout(() => {
+          if (btn) btn.innerHTML = originalHTML;
+        }, 2000);
+      }
     };
 
     // Get explanation
     const language = detectLanguage(selectedText);
     const explanation = await getAIExplanation(selectedText, language);
+    
+    // Store the explanation
+    currentExplanation = explanation;
 
     // Update tooltip content if it still exists
     if (currentTooltip && document.contains(currentTooltip)) {
       const htmlContent = convertMarkdownToHTML(explanation, language);
       currentTooltip.querySelector(".tooltip-content").innerHTML = htmlContent;
     }
+
+    // Reset processing flag
+    isProcessingSelection = false;
   }, 300); // 300ms delay to ensure selection is complete
 });
 
-// Close tooltip when clicking outside
+// Function to properly close tooltip and clear selection
+function closeTooltipProperly() {
+  // Set close time to prevent immediate reopening
+  tooltipCloseTime = Date.now();
+  
+  // Clear the last processed selection to allow for new selections
+  lastProcessedSelection = "";
+  
+  // Clear the text selection
+  if (window.getSelection) {
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+  }
+  
+  // Remove the tooltip
+  removeTooltip();
+  
+  // Reset processing flag
+  isProcessingSelection = false;
+}
+
+// Close tooltip when clicking outside (but not when clicking inside)
 document.addEventListener("click", (e) => {
-  if (currentTooltip && !currentTooltip.contains(e.target)) {
-    removeTooltip();
+  if (currentTooltip && !e.target.closest("#contextify-tooltip")) {
+    closeTooltipProperly();
   }
 });
 
 // Remove tooltip when selection changes
 document.addEventListener("selectionchange", () => {
-  // Only remove if no text is selected
-  if (window.getSelection().toString().trim() === "") {
+  // Don't react to selection changes if we just closed the tooltip
+  if (Date.now() - tooltipCloseTime < 500) {
+    return;
+  }
+  
+  // Only remove if no text is selected and we're not processing
+  if (!isProcessingSelection && window.getSelection().toString().trim() === "") {
     setTimeout(() => {
-      if (window.getSelection().toString().trim() === "") {
+      if (!isProcessingSelection && 
+          window.getSelection().toString().trim() === "" && 
+          Date.now() - tooltipCloseTime > 500) {
         removeTooltip();
+        lastProcessedSelection = ""; // Reset when selection is cleared naturally
       }
     }, 100);
   }
@@ -195,6 +289,7 @@ function removeTooltip() {
     }, 200);
   }
   currentTooltip = null;
+  currentExplanation = ""; // Clear stored explanation
 }
 
 // Enhanced Markdown parser with syntax highlighting
